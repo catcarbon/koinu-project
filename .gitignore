@@ -1,3 +1,6 @@
+app/static/development
+app/static/production
+
 
 # Created by https://www.gitignore.io/api/venv,macos,flask,python,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=venv,macos,flask,python,visualstudiocode
