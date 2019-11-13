@@ -3,7 +3,7 @@ create database if not exists koinu default charset utf8mb4
 
 use koinu;
 
--- no foreign keys should restrict update/delete because all of them reference
+-- foreign keys should restrict update/delete because all of them reference
 --   some kind of auto_increment primary key
 -- removing a row from frontend view is done by setting status to disabled
 -- all foreign keys are indexed by default
