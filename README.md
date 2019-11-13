@@ -11,14 +11,8 @@ i.e. run `python3 -m venv venv && source venv/bin/activate`
 i.e. run `pip install -r requirements.txt`
 
 ### Run development server locally
-First, export environment variable, i.e. `export FLASK_APP=hello.py`
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;... for Windows with Powershell: `$env:FLASK_APP = "hello.py"`
-<br>
-Then execute `flask run` 
-<br>
-&nbsp;&nbsp;&nbsp;&nbsp;... or alternatively, just use `python -m flask`
+execute `run.sh` script
 
-The development server will be running on `https://127.0.0.1:5000`
+The development server will be running on `http://127.0.0.1:5000`
 
 ## Running with Nginx (reverse proxy)
