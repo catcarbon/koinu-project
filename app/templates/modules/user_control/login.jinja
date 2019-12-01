@@ -1,8 +1,0 @@
-{% include 'header.jinja' %}
-
-<h1>You are {{ user or 'not logged in' }}!</h1>
-{% if not user %}
-<p>Please login</p>
-{% endif %}
-
-{% include 'footer.jinja' %}

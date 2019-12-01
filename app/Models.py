@@ -11,12 +11,20 @@ from app.KoinuConfig import ActiveConfig as Config
 
 
 subscription_table = db.Table('Subscription',
-                              db.Column('user_uid', db.Integer, db.ForeignKey('User.uid')),
-                              db.Column('channel_cid', db.Integer, db.ForeignKey('Channel.cid')))
+                              db.Column('sub_user_uid', db.Integer, db.ForeignKey('User.uid')),
+                              db.Column('sub_channel_cid', db.Integer, db.ForeignKey('Channel.cid')))
 
 favorite_table = db.Table('Favorite',
-                          db.Column('user_uid', db.Integer, db.ForeignKey('User.uid')),
-                          db.Column('article_aid', db.Integer, db.ForeignKey('Article.aid')))
+                          db.Column('fav_user_uid', db.Integer, db.ForeignKey('User.uid')),
+                          db.Column('fav_article_aid', db.Integer, db.ForeignKey('Article.aid')))
+
+comment_table = db.Table('Comment',
+                         db.Column('coid', db.Integer, primary_key=True, autoincrement=True),
+                         db.Column('body', db.Text, nullable=False),
+                         db.Column('comment_created', db.DateTime(timezone=True), server_default=func.now()),
+                         db.Column('comment_updated', db.DateTime(timezone=True), onupdate=func.now()),
+                         db.Column('comment_user_uid', db.Integer, db.ForeignKey('User.uid')),
+                         db.Column('comment_article_aid', db.Integer, db.ForeignKey('Article.aid')))
 
 
 class UserRole(Enum):
@@ -35,6 +43,7 @@ class User(db.Model):
 
     subscribed_to = db.relationship('subscribed_to', secondary=subscription_table, back_populates='subscribed_by')
     favorites = db.relationship('favorites', secondary=favorite_table, back_populates='favorited_by')
+    comments = db.relationship('comments', secondary=comment_table, back_populates='commented_by')
 
     def __init__(self, username):
         self.username = username
@@ -114,6 +123,8 @@ class Article(db.Model):
     article_channel_cid = db.Column(db.Integer, db.ForeignKey('Channel.cid'))
 
     favorited_by = db.relationship('favorited_by', secondary=favorite_table, back_populates='favorites')
+    commented_by = db.relationship('commented_by', secondary=comment_table, back_populates='comments')
 
     def __repr__(self):
         return '<Article {}: {}>'.format(self.aid, self.title)
+
