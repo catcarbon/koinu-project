@@ -1,5 +1,4 @@
 source venv/bin/activate
-export FLASK_APP=app/Koinu.py
-python $FLASK_APP
-#flask run
-#python wsgi.py
+export FLASK_ENV=development
+export FLASK_APP=app/__init__.py
+flask run
