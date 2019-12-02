@@ -41,6 +41,11 @@ def check_blacklisted(decrypted_token):
     return jti in blacklist
 
 
+@app_instance.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({'msg': 'method not allowed'}), 405
+
+
 @app_instance.route('/')
 def hello_world():
     return jsonify({'msg': 'Hello!'})

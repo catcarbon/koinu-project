@@ -95,7 +95,7 @@ def unlike(aid):
 
 @content_display.route('/subscriptions')
 @jwt_required
-def get_newest_articles_from_subscribed_channel(limit=5):
+def get_newest_articles_from_subscribed_channel(limit=20):
     username = get_jwt_identity()
     user_obj = User.query.filter_by(username=username).first()
 
@@ -118,9 +118,9 @@ def get_newest_articles_from_subscribed_channel(limit=5):
     return jsonify(article_list), 200
 
 
-@content_display.route('/favorites')
+@content_display.route('/favorites/<int:page_offset>')
 @jwt_required
-def get_favorites_list(limit=5, page_offset=0):
+def get_favorites_list(limit=20, page_offset=0):
     username = get_jwt_identity()
     user_obj = User.query.filter_by(username=username).first()
 
