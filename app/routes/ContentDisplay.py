@@ -130,7 +130,7 @@ def get_newest_articles_from_subscribed_channel(limit=20):
 @jwt_required
 def get_favorites_list(limit=20, page_offset=0):
     if limit < 1:
-        return jsonify(), 204
+        return jsonify([]), 200
 
     username = get_jwt_identity()
     user_obj: User = User.query.filter_by(username=username).first()

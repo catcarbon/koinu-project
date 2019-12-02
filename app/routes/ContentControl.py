@@ -8,7 +8,6 @@ content_control = Blueprint('content_control', __name__)
 
 
 @content_control.route('/article/<int:aid>')
-@jwt_required
 def get_article(aid):
     article = Article.query.get(aid)
 
@@ -27,7 +26,6 @@ def get_article(aid):
 
 
 @content_control.route('/article/comments/<int:aid>')
-@jwt_required
 def get_comments(aid):
     article = Article.query.get(aid)
 
@@ -44,7 +42,7 @@ def get_comments(aid):
 
         comment_list.append(comment_dict)
 
-    return jsonify(comment_list), 200 if len(comment_list) > 0 else 204
+    return jsonify(comment_list), 200
 
 
 @content_control.route('/article/comment/<int:aid>', methods=['POST'])
@@ -74,7 +72,6 @@ def post_comment(aid):
 
 
 @content_control.route('/channel/<int:cid>')
-@jwt_required
 def get_channel(cid):
     channel = Channel.query.get(cid)
 
@@ -104,7 +101,6 @@ def get_channel(cid):
 
 
 @content_control.route('/channels')
-@jwt_required
 def get_channels():
     channel_list = []
     for channel in Channel.query.filter():
