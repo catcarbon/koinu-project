@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from sqlalchemy import and_
@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.Models import User, Article, Channel
-from app.Models import favorite_table, subscription_table
+from app.Models import favorite_table
 
 content_display = Blueprint('content_display', __name__)
 channel_management = Blueprint('channel_management', __name__)
