@@ -76,7 +76,7 @@ def unsubscribe_from(cid):
 @favorite_management.route('/unlike/<int:aid>')
 @jwt_required
 def unlike(aid):
-    username = get_jwt_identity()
+    username: object = get_jwt_identity()
     user_obj = User.query.filter_by(username=username).first()
     article_obj = Article.query.get(aid)
 

@@ -26,8 +26,10 @@ def create_app():
     db.init_app(_app)
     migrate.init_app(_app, db)
 
-    _app.register_blueprint(import_module('app.routes.UserControl').user_control, url_prefix='/user')
-    _app.register_blueprint(import_module('app.routes.ContentDisplay').content_display, url_prefix='/')
+    _app.register_blueprint(import_module('app.routes.UserControl').user_control, url_prefix='/api/user')
+    _app.register_blueprint(import_module('app.routes.ContentDisplay').content_display, url_prefix='/api')
+    _app.register_blueprint(import_module('app.routes.ContentDisplay').channel_management, url_prefix='/api')
+    _app.register_blueprint(import_module('app.routes.ContentDisplay').favorite_management, url_prefix='/api')
 
     return _app
 
@@ -41,11 +43,16 @@ def check_blacklisted(decrypted_token):
     return jti in blacklist
 
 
+@app_instance.errorhandler(404)
+def resource_not_found(e):
+    return jsonify({'msg': 'resource not found'}), 404
+
+
 @app_instance.errorhandler(405)
 def method_not_allowed(e):
     return jsonify({'msg': 'method not allowed'}), 405
 
 
-@app_instance.route('/')
+@app_instance.route('/api')
 def hello_world():
     return jsonify({'msg': 'Hello!'})
