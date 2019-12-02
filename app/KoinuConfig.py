@@ -41,8 +41,11 @@ class DebugConfig(KoinuConfig):
     DEVELOPMENT = True
 
     # shorter jwt token expiry for debug
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=5)
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(minutes=5)
+    # JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=5)
+    # JWT_REFRESH_TOKEN_EXPIRES = timedelta(minutes=5)
+
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=1)
 
     # use root to avoid permission error while performing migrations
     DB_USER = 'root'

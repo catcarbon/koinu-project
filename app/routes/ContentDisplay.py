@@ -1,10 +1,12 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.Models import User, Article, Channel
+from app.Models import favorite_table, subscription_table
 
 content_display = Blueprint('content_display', __name__)
 channel_management = Blueprint('channel_management', __name__)
@@ -93,6 +95,21 @@ def unlike(aid):
         return jsonify({'msg': 'article is not liked by user'}), 200
 
 
+def helper_article_list(iterator):
+    article_list = []
+    for article in iterator:
+        article_dict = {
+            'aid': article.aid,
+            'title': article.title,
+            'author': article.author.username,
+            'publish_time': article.article_created,
+            'content': article.content
+        }
+        article_list.append(article_dict)
+
+    return article_list
+
+
 @content_display.route('/subscriptions')
 @jwt_required
 def get_newest_articles_from_subscribed_channel(limit=20):
@@ -104,24 +121,24 @@ def get_newest_articles_from_subscribed_channel(limit=20):
     it = Article.query.filter(Article.article_channel_cid.in_(channel_map))\
                       .order_by(Article.article_created.desc()).limit(limit)
 
-    article_list = []
-    for article in it:
-        article_dict = {
-            'aid': article.aid,
-            'title': article.title,
-            'author': article.author.username,
-            'publish_time': article.article_created,
-            'content': article.content
-        }
-        article_list.append(article_dict)
+    article_list = helper_article_list(it)
 
     return jsonify(article_list), 200
 
 
-@content_display.route('/favorites/<int:page_offset>')
+@content_display.route('/favorites/<int:limit>')
 @jwt_required
 def get_favorites_list(limit=20, page_offset=0):
-    username = get_jwt_identity()
-    user_obj = User.query.filter_by(username=username).first()
+    if limit < 1:
+        return jsonify(), 204
 
-    # TODO
+    username = get_jwt_identity()
+    user_obj: User = User.query.filter_by(username=username).first()
+
+    it = db.session.query(favorite_table, Article)\
+        .filter(and_(favorite_table.c.fav_user_uid == user_obj.uid, favorite_table.c.fav_article_aid == Article.aid))\
+        .order_by(Article.article_created.desc()).limit(limit)
+
+    article_list = helper_article_list(map(lambda x: x[-1], it))
+
+    return jsonify(article_list), 200
