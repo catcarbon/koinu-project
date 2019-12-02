@@ -32,7 +32,8 @@ class ProductionConfig(KoinuConfig):
     DB_USER = 'dp-user'
     DB_PASS = 'randomly...generated...password'
     DB_HOST = 'localhost'
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{}:{}@{}/{}'.format(DB_USER, DB_PASS, DB_HOST, KoinuConfig.APP_NAME)
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{}:{}@{}/{}?charset=utf8mb4'.format(DB_USER, DB_PASS,
+                                                                                   DB_HOST, KoinuConfig.APP_NAME)
 
 
 class DebugConfig(KoinuConfig):
@@ -47,7 +48,8 @@ class DebugConfig(KoinuConfig):
     DB_USER = 'root'
     DB_PASS = 'random...string...'
     DB_HOST = 'localhost'
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{}:{}@{}/{}'.format(DB_USER, DB_PASS, DB_HOST, KoinuConfig.APP_NAME)
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{}:{}@{}/{}?charset=utf8mb4'.format(DB_USER, DB_PASS,
+                                                                                   DB_HOST, KoinuConfig.APP_NAME)
 
 
 DefaultConfig = ProductionConfig()

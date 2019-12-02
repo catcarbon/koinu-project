@@ -36,3 +36,7 @@ insert into User values(
     4,
     0
 );
+
+insert into Article values (
+
+                           )

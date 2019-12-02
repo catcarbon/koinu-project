@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, get_raw_jwt
+from flask_jwt_extended import jwt_required, create_access_token, get_raw_jwt
 
 from app import db, blacklist
 from app.Models import User, UserRole
@@ -25,7 +25,7 @@ def register():
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        token = create_access_token(user)
+        token = create_access_token(user.username)
         return jsonify({'user': user.username, 'msg': 'User creation successful', 'token': token}), 201
 
 
@@ -44,8 +44,8 @@ def login():
     if user is None or not user.check_password(password):
         return jsonify({'message': 'Bad credentials'}), 401
     else:
-        token = create_access_token(user)
-        return jsonify({'user': user.username, 'msg': 'Login successful', 'access-token': token}), 200
+        token = create_access_token(user.username)
+        return jsonify({'username': user.username, 'msg': 'Login successful', 'access-token': token}), 200
 
 
 @user_control.route('/logout')
@@ -57,8 +57,10 @@ def logout():
 
 
 @user_control.route('/admin-login')
+@jwt_required
 def adm_login():
     user = User(username='admin')
     user.role = UserRole.Admin
     token = create_access_token(user.username)
     return jsonify({'user': user.username, 'msg': 'Login successful', 'access-token': token}), 200
+

@@ -10,21 +10,23 @@ from app import db, argon2
 from app.KoinuConfig import ActiveConfig as Config
 
 
-subscription_table = db.Table('Subscription',
+subscription_table = db.Table('subscriptions',
                               db.Column('sub_user_uid', db.Integer, db.ForeignKey('User.uid')),
                               db.Column('sub_channel_cid', db.Integer, db.ForeignKey('Channel.cid')))
 
-favorite_table = db.Table('Favorite',
+favorite_table = db.Table('favorites',
                           db.Column('fav_user_uid', db.Integer, db.ForeignKey('User.uid')),
                           db.Column('fav_article_aid', db.Integer, db.ForeignKey('Article.aid')))
 
-comment_table = db.Table('Comment',
-                         db.Column('coid', db.Integer, primary_key=True, autoincrement=True),
-                         db.Column('body', db.Text, nullable=False),
-                         db.Column('comment_created', db.DateTime(timezone=True), server_default=func.now()),
-                         db.Column('comment_updated', db.DateTime(timezone=True), onupdate=func.now()),
-                         db.Column('comment_user_uid', db.Integer, db.ForeignKey('User.uid')),
-                         db.Column('comment_article_aid', db.Integer, db.ForeignKey('Article.aid')))
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    coid = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    body = db.Column(db.Text, nullable=False)
+    comment_created = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    comment_updated = db.Column(db.DateTime(timezone=True), onupdate=func.now())
+    comment_user_uid = db.Column(db.Integer, db.ForeignKey('User.uid'), nullable=False)
+    comment_article_aid = db.Column(db.Integer, db.ForeignKey('Article.aid'), nullable=False)
 
 
 class UserRole(Enum):
@@ -41,9 +43,12 @@ class User(db.Model):
     role = db.Column(db.SmallInteger, default=4, server_default="4", nullable=False)
     is_active = db.Column(db.Boolean, default=1, server_default="1", nullable=False)
 
-    subscribed_to = db.relationship('subscribed_to', secondary=subscription_table, back_populates='subscribed_by')
-    favorites = db.relationship('favorites', secondary=favorite_table, back_populates='favorited_by')
-    comments = db.relationship('comments', secondary=comment_table, back_populates='commented_by')
+    subscribes = db.relationship('Channel', secondary=subscription_table, lazy='subquery',
+                                 backref=db.backref('subscribers', lazy=True))
+    favorites = db.relationship('Article', secondary=favorite_table, lazy='subquery',
+                                backref=db.backref('liked_by', lazy=True))
+    sent_comments = db.relationship('Comment', lazy='subquery',
+                                    backref=db.backref('sent_by', lazy=True))
 
     def __init__(self, username):
         self.username = username
@@ -62,7 +67,7 @@ class User(db.Model):
         except BadSignature:
             return None
 
-        user = User.query.get(data['uid'])
+        user = User.query.get(data['username'])
         return user
 
     def get_id(self):
@@ -102,7 +107,8 @@ class Channel(db.Model):
     is_public = db.Column(db.Boolean, default=1, server_default="1", nullable=False)
     channel_admin_uid = db.Column(db.Integer, db.ForeignKey('User.uid'))
 
-    subscribed_by = db.relationship('subscribed_by', secondary=subscription_table, back_populates='subscribed_to')
+    def __repr__(self):
+        return 'Channel {}: {}'.format(self.cid, self.name)
 
 
 class ArticleStatus:
@@ -122,8 +128,8 @@ class Article(db.Model):
     article_author_uid = db.Column(db.Integer, db.ForeignKey('User.uid'))
     article_channel_cid = db.Column(db.Integer, db.ForeignKey('Channel.cid'))
 
-    favorited_by = db.relationship('favorited_by', secondary=favorite_table, back_populates='favorites')
-    commented_by = db.relationship('commented_by', secondary=comment_table, back_populates='comments')
+    received_comments = db.relationship('Comment', lazy='subquery',
+                                        backref=db.backref('posted_on', lazy=True))
 
     def __repr__(self):
         return '<Article {}: {}>'.format(self.aid, self.title)
