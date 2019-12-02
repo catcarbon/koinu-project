@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, create_access_token, get_raw_jwt
+from flask_jwt_extended import fresh_jwt_required, create_access_token, get_raw_jwt
 
 from app import db, blacklist
 from app.Models import User, UserRole
@@ -49,7 +49,7 @@ def login():
 
 
 @user_control.route('/logout')
-@jwt_required
+@fresh_jwt_required
 def logout():
     jti = get_raw_jwt()['jti']
     blacklist.add(jti)
@@ -57,7 +57,7 @@ def logout():
 
 
 @user_control.route('/admin-login')
-@jwt_required
+@fresh_jwt_required
 def adm_login():
     user = User(username='admin')
     user.role = UserRole.Admin

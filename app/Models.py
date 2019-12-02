@@ -11,12 +11,12 @@ from app.KoinuConfig import ActiveConfig as Config
 
 
 subscription_table = db.Table('subscriptions',
-                              db.Column('sub_user_uid', db.Integer, db.ForeignKey('User.uid')),
-                              db.Column('sub_channel_cid', db.Integer, db.ForeignKey('Channel.cid')))
+                              db.Column('sub_user_uid', db.Integer, db.ForeignKey('User.uid'), primary_key=True),
+                              db.Column('sub_channel_cid', db.Integer, db.ForeignKey('Channel.cid'), primary_key=True))
 
 favorite_table = db.Table('favorites',
-                          db.Column('fav_user_uid', db.Integer, db.ForeignKey('User.uid')),
-                          db.Column('fav_article_aid', db.Integer, db.ForeignKey('Article.aid')))
+                          db.Column('fav_user_uid', db.Integer, db.ForeignKey('User.uid'), primary_key=True),
+                          db.Column('fav_article_aid', db.Integer, db.ForeignKey('Article.aid'), primary_key=True))
 
 
 class Comment(db.Model):
@@ -43,10 +43,12 @@ class User(db.Model):
     role = db.Column(db.SmallInteger, default=4, server_default="4", nullable=False)
     is_active = db.Column(db.Boolean, default=1, server_default="1", nullable=False)
 
-    subscribes = db.relationship('Channel', secondary=subscription_table, lazy='subquery',
-                                 backref=db.backref('subscribers', lazy=True))
+    subscriptions = db.relationship('Channel', secondary=subscription_table, lazy='subquery',
+                                    backref=db.backref('subscribers', lazy=True))
     favorites = db.relationship('Article', secondary=favorite_table, lazy='subquery',
                                 backref=db.backref('liked_by', lazy=True))
+    published_articles = db.relationship('Article', lazy='subquery',
+                                         backref=db.backref('author', lazy=True))
     sent_comments = db.relationship('Comment', lazy='subquery',
                                     backref=db.backref('sent_by', lazy=True))
 
@@ -107,8 +109,11 @@ class Channel(db.Model):
     is_public = db.Column(db.Boolean, default=1, server_default="1", nullable=False)
     channel_admin_uid = db.Column(db.Integer, db.ForeignKey('User.uid'))
 
+    articles = db.relationship('Article', lazy='subquery',
+                               backref=db.backref('channel', lazy=True))
+
     def __repr__(self):
-        return 'Channel {}: {}'.format(self.cid, self.name)
+        return '<Channel {}: {}>'.format(self.cid, self.name)
 
 
 class ArticleStatus:

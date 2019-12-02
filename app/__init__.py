@@ -27,6 +27,7 @@ def create_app():
     migrate.init_app(_app, db)
 
     _app.register_blueprint(import_module('app.routes.UserControl').user_control, url_prefix='/user')
+    _app.register_blueprint(import_module('app.routes.ContentDisplay').content_display, url_prefix='/')
 
     return _app
 
