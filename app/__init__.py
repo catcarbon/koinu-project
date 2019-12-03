@@ -31,6 +31,7 @@ def create_app():
     _app.register_blueprint(import_module('app.routes.ContentDisplay').channel_management, url_prefix='/api')
     _app.register_blueprint(import_module('app.routes.ContentDisplay').favorite_management, url_prefix='/api')
     _app.register_blueprint(import_module('app.routes.ContentControl').content_control, url_prefix='/api')
+    _app.register_blueprint(import_module('app.routes.Admin').admin, url_prefix='/api')
 
     return _app
 

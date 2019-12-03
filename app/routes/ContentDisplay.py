@@ -21,9 +21,9 @@ def subscribe_to(cid):
     channel_obj = db.session.query(Channel).get(cid)
 
     if not user_obj:
-        return jsonify({'msg': 'who are you?'}), 400
+        return jsonify({'msg': 'who are you?'}), 401
     if not channel_obj:
-        return jsonify({'msg': 'what channel?'}), 400
+        return jsonify({'msg': 'what channel?'}), 404
 
     try:
         user_obj.subscriptions.append(channel_obj)
@@ -39,12 +39,12 @@ def subscribe_to(cid):
 def like(aid):
     username = get_jwt_identity()
     user_obj = User.query.filter_by(username=username).first()
-    article_obj = Article.query.get(aid)
+    article_obj = Article.query.filter(Article.article_status < 3).filter_by(aid=aid).first()
 
     if not user_obj:
-        return jsonify({'msg': 'who are you?'}), 400
+        return jsonify({'msg': 'who are you?'}), 401
     if not article_obj:
-        return jsonify({'msg': 'what article?'}), 400
+        return jsonify({'msg': 'what article?'}), 404
 
     try:
         user_obj.favorites.append(article_obj)
@@ -63,9 +63,9 @@ def unsubscribe_from(cid):
     channel_obj = Channel.query.get(cid)
 
     if not user_obj:
-        return jsonify({'msg': 'who are you?'}), 400
+        return jsonify({'msg': 'who are you?'}), 401
     if not channel_obj:
-        return jsonify({'msg': 'what channel?'}), 400
+        return jsonify({'msg': 'what channel?'}), 404
 
     try:
         user_obj.subscriptions.remove(channel_obj)
@@ -80,12 +80,12 @@ def unsubscribe_from(cid):
 def unlike(aid):
     username: object = get_jwt_identity()
     user_obj = User.query.filter_by(username=username).first()
-    article_obj = Article.query.get(aid)
+    article_obj = Article.query.filter(Article.article_status < 3).filter_by(aid=aid).first()
 
     if not user_obj:
-        return jsonify({'msg': 'who are you?'}), 400
+        return jsonify({'msg': 'who are you?'}), 401
     if not article_obj:
-        return jsonify({'msg': 'what article?'}), 400
+        return jsonify({'msg': 'what article?'}), 404
 
     try:
         user_obj.favorites.remove(article_obj)
@@ -118,14 +118,16 @@ def get_newest_articles_from_subscribed_channel(limit=20):
 
     channel_map = map(lambda channel: channel.cid, user_obj.subscriptions)
 
-    it = Article.query.filter(Article.article_channel_cid.in_(channel_map))\
+    it = Article.query.filter(and_(Article.article_channel_cid.in_(channel_map)), Article.article_status < 3)\
                       .order_by(Article.article_created.desc()).limit(limit)
 
     article_list = helper_article_list(it)
 
     return jsonify(article_list), 200
 
-
+#
+# TODO: filter out articles which channel has been disabled
+#
 @content_display.route('/favorites/<int:limit>')
 @jwt_required
 def get_favorites_list(limit=20, page_offset=0):
@@ -136,7 +138,9 @@ def get_favorites_list(limit=20, page_offset=0):
     user_obj: User = User.query.filter_by(username=username).first()
 
     it = db.session.query(favorite_table, Article)\
-        .filter(and_(favorite_table.c.fav_user_uid == user_obj.uid, favorite_table.c.fav_article_aid == Article.aid))\
+        .filter(and_(favorite_table.c.fav_user_uid == user_obj.uid,
+                     favorite_table.c.fav_article_aid == Article.aid,
+                     Article.article_status < 3))\
         .order_by(Article.article_created.desc()).limit(limit)
 
     article_list = helper_article_list(map(lambda x: x[-1], it))

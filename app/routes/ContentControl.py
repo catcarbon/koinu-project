@@ -9,10 +9,12 @@ content_control = Blueprint('content_control', __name__)
 
 @content_control.route('/article/<int:aid>')
 def get_article(aid):
-    article = Article.query.get(aid)
+    article = Article.query.join(Channel)\
+                           .filter(Article.aid == aid)\
+                           .filter(Channel.status != 4).first()
 
     if not article:
-        return jsonify(msg='what article?'), 400
+        return jsonify(msg='what article?'), 404
 
     article_dict = {
         'aid': article.aid,
@@ -25,16 +27,20 @@ def get_article(aid):
     return jsonify(article_dict), 200
 
 
+#
+# TODO: filter out comments by disabled users
+#
 @content_control.route('/article/comments/<int:aid>')
 def get_comments(aid):
-    article = Article.query.get(aid)
+    article = Article.query.filter(Article.article_status < 3).filter_by(aid=aid).first()
 
     if not article:
-        return jsonify(msg='what article?'), 400
+        return jsonify(msg='what article?'), 404
 
     comment_list = []
     for comment in article.received_comments:
         comment_dict = {
+            'coid': comment.coid,
             'author': comment.sent_by.username,
             'content': comment.body,
             'time': comment.comment_created
@@ -60,9 +66,9 @@ def post_comment(aid):
     if not user_obj:
         return jsonify(msg='who are you?'), 400
 
-    article_obj = Article.query.get(aid)
+    article_obj = Article.query.filter(Article.article_status < 3).filter_by(aid=aid).first()
     if not article_obj:
-        return jsonify(msg='what article?'), 400
+        return jsonify(msg='what article?'), 404
 
     comment_obj = Comment(body=comment, comment_article_aid=article_obj.aid)
     user_obj.sent_comments.append(comment_obj)
@@ -71,12 +77,15 @@ def post_comment(aid):
     return jsonify(msg='comment posted'), 201
 
 
+#
+# TODO: filter out disabled articles
+#
 @content_control.route('/channel/<int:cid>')
 def get_channel(cid):
-    channel = Channel.query.get(cid)
+    channel = Channel.query.filter(Channel.status != 4).filter_by(cid=cid).first()
 
     if not channel:
-        return jsonify(msg='what channel?'), 400
+        return jsonify(msg='what channel?'), 404
 
     channel_dict = {
         'cid': channel.cid,
@@ -103,7 +112,7 @@ def get_channel(cid):
 @content_control.route('/channels')
 def get_channels():
     channel_list = []
-    for channel in Channel.query.filter():
+    for channel in Channel.query.filter(Channel.status != 4):
         channel_dict = {
             'cid': channel.cid,
             'name': channel.name,
