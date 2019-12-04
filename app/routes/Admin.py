@@ -185,6 +185,7 @@ def get_requests(cid=None):
         article_dict = {
             'aid': article.aid,
             'cid': article.article_channel_cid,
+            'channel': article.channel.name,
             'title': article.title,
             'author': article.author.username,
             'publish_time': article.article_created,

@@ -40,13 +40,15 @@ def login():
     if username is None or password is None:
         return jsonify({'msg': 'Missing required fields'}), 400
 
-    user = User.query.filter_by(username=username, is_active=True).first()
-    if user is None or not user.check_password(password):
-        return jsonify({'message': 'Bad credentials'}), 401
+    user = User.query.filter_by(username=username).first()
+    if user and not user.is_active:
+        return jsonify(msg='Your account has been disabled'), 401
+    elif user is None or not user.check_password(password):
+        return jsonify({'msg': 'Bad credentials'}), 401
     else:
         token = create_access_token(user.username)
         return jsonify({'username': user.username, 'msg': 'Login successful',
-                        'access-token': token, 'is_admin': user.is_admin()}), 200
+                        'access-token': token, 'is_admin': int(user.is_admin())}), 200
 
 
 @user_control.route('/logout')
