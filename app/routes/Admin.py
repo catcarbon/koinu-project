@@ -16,6 +16,14 @@ def check_admin(username):
     return False
 
 
+#
+# Return a single channel which isn't disabled.
+#
+def one_channel_query(cid):
+    channel = Channel.query.filter(Channel.status.op('&')(4) == 0).filter_by(cid=cid).first()
+    return channel
+
+
 @admin.route('/channel/create', methods=['POST'])
 @jwt_required
 @limit_payload_length(Channel.MAX_NAME_LENGTH + Channel.MAX_DESCRIPTION_LENGTH + 100)
@@ -27,12 +35,12 @@ def create_channel():
     if not name:
         return jsonify(msg='missing required channel name'), 400
 
-    description = request.json.get('description')
-    is_public = request.json.get('is_public')
-
     username = get_jwt_identity()
     if not check_admin(username):
         return jsonify(msg='unauthorized'), 401
+
+    description = request.json.get('description')
+    is_public = request.json.get('is_public')
 
     channel_obj = Channel(name=name, description=description, is_public=is_public)
     db.session.add(channel_obj)
@@ -42,7 +50,7 @@ def create_channel():
         ret_json['cid'] = channel_obj.cid
         db.session.commit()
     except IntegrityError:
-        ret_json['msg'], ret_code = 'channel name existed', 200
+        ret_json['msg'], ret_code = 'channel name existed', 400
         db.session.rollback()
     except DataError:
         ret_json['msg'] = 'requested name and/or description too long'
@@ -65,7 +73,7 @@ def delete_article(aid):
         return jsonify(msg='what article?'), 404
 
     if article_obj.is_disabled():
-        return jsonify(msg='article already removed'), 200
+        return jsonify(msg='article already removed'), 400
     else:
         article_obj.set_disabled()
         db.session.add(article_obj)
@@ -73,6 +81,9 @@ def delete_article(aid):
         return jsonify(msg='article removed'), 200
 
 
+#
+# Comment are outright deleted from database, not disabled.
+#
 @admin.route('/article/comments/delete/<int:aid>/<int:coid>', methods=['POST', 'DELETE'])
 @jwt_required
 def delete_comment(aid, coid):
@@ -101,7 +112,7 @@ def delete_channel(cid):
         return jsonify(msg='what channel?'), 404
 
     if channel_obj.is_disabled():
-        return jsonify(msg='channel already removed'), 200
+        return jsonify(msg='channel already removed'), 400
     else:
         channel_obj.set_disabled()
         db.session.add(channel_obj)
@@ -126,8 +137,13 @@ def post_article_to_channel(cid):
     if not user_obj:
         return jsonify(msg='who are you?'), 400
 
-    article_obj = Article(title=title, content=content,
-                          article_author_uid=user_obj.uid, article_channel_cid=cid)
+    channel = one_channel_query(cid)
+    if not channel:
+        return jsonify(msg='what channel?'), 404
+
+    # admin user can post article without approval
+    article_obj = Article(title=title, content=content, article_author_uid=user_obj.uid,
+                          article_channel_cid=cid, article_status=1 if user_obj.is_admin() else 9)
     db.session.add(article_obj)
 
     try:
@@ -139,6 +155,9 @@ def post_article_to_channel(cid):
                        max_title=Article.MAX_TITLE_LENGTH, max_content=Article.MAX_CONTENT_LENGTH), 413
 
 
+#
+# Return active requests of active channels.
+#
 @admin.route('/article/requests')
 @admin.route('/article/requests/<int:cid>')
 @jwt_required
@@ -149,10 +168,17 @@ def get_requests(cid=None):
 
     request_it = []
     if cid:
-        requests_it = Article.query.filter(Article.article_status.op('&')(8) != 0)\
+        channel = one_channel_query(cid)
+        if not channel:
+            return jsonify(msg='what channel?'), 404
+
+        requests_it = Article.query.filter(Article.article_status.op('&')(4) == 0)\
+                                   .filter(Article.article_status.op('&')(8) != 0)\
                                    .filter_by(article_channel_cid=cid)
     else:
-        requests_it = Article.query.filter(Article.article_status.op('&')(8) != 0)
+        requests_it = Article.query.join(Channel).filter(Channel.status.op('&')(4) == 0)\
+                                                 .filter(Article.article_status.op('&')(4) == 0)\
+                                                 .filter(Article.article_status.op('&')(8) != 0)
 
     requested_articles = []
     for article in requests_it:
@@ -181,13 +207,17 @@ def accept_article(aid):
     if not article:
         return jsonify(msg='what article?'), 404
 
-    if article.is_requested():
+    if article.is_requested() and not article.is_disabled():
         article.toggle_requested()
         db.session.add(article)
         db.session.commit()
         return jsonify(msg='requested article accepted'), 200
 
-    return jsonify(msg='requested article already accepted'), 200
+    msg = 'requested article already accepted'
+    if article.is_disabled():
+        msg = 'requested article has been removed'  # currently no api to restore article
+
+    return jsonify(msg=msg), 400
 
 
 @admin.route('/article/reject/<int:aid>', methods=['POST'])
@@ -202,7 +232,7 @@ def reject_article(aid):
         return jsonify(msg='what article?'), 404
 
     if article.is_requested() and not article.is_disabled():
-        article.toggle_requested()
+        # retain requested flag so it shows that the article is rejected on request, not disabled later
         article.toggle_disabled()
         db.session.add(article)
         db.session.commit()
@@ -212,4 +242,4 @@ def reject_article(aid):
     if article.is_disabled():
         msg = 'requested article already removed'
 
-    return jsonify(msg=msg), 200
+    return jsonify(msg=msg), 400

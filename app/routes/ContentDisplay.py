@@ -11,6 +11,7 @@ content_display = Blueprint('content_display', __name__)
 channel_management = Blueprint('channel_management', __name__)
 favorite_management = Blueprint('favorite_management', __name__)
 
+
 #
 # User can only subscribe to non-disabled channels
 #
@@ -34,6 +35,7 @@ def subscribe_to(cid):
     except IntegrityError:
         db.session.rollback()
         return jsonify({'msg': 'already subscribed'}), 200
+
 
 #
 # User can only like active articles (not disabled, not requested)
@@ -60,6 +62,7 @@ def like(aid):
         db.session.rollback()
         return jsonify({'msg': 'already liked'}), 200
 
+
 #
 # User may unsubscribe from any channel, including disabled channels
 #
@@ -81,6 +84,7 @@ def unsubscribe_from(cid):
         return jsonify({'msg': 'successfully unsubscribed'}), 200
     except ValueError:
         return jsonify({'msg': 'user did not subscribe'}), 200
+
 
 #
 # User may unlike any article, including disabled and/or requested articles

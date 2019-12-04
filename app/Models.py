@@ -146,6 +146,7 @@ class ArticleStatus(Enum):
     Private = 2
     Disabled = 4
     Requested = 8
+    RejectedRequest = 12
 
 
 class Article(db.Model):

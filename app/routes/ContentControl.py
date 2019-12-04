@@ -8,12 +8,21 @@ from app.Models import User, Article, Channel, Comment
 content_control = Blueprint('content_control', __name__)
 
 
+#
+# Return a single article which isn't disabled or its channel disabled.
+#
+def one_article_query(aid):
+    article = Article.query.join(Channel).filter(Article.aid == aid) \
+                           .filter(Channel.status.op('&')(4) == 0) \
+                           .filter(Article.article_status.op('&')(4) == 0) \
+                           .filter(Article.article_status.op('&')(8) == 0).first()
+
+    return article
+
+
 @content_control.route('/article/<int:aid>')
 def get_article(aid):
-    article = Article.query.join(Channel)\
-                           .filter(Article.aid == aid)\
-                           .filter(Channel.status.op('&')(4) == 0).first()
-
+    article = one_article_query(aid)
     if not article:
         return jsonify(msg='what article?'), 404
 
@@ -27,16 +36,14 @@ def get_article(aid):
 
     return jsonify(article_dict), 200
 
+
 #
 # Removed comments are being deleted from the database in current implementation.
+# However, comments made by a later disabled user are not deleted, so these are filtered out.
 #
 @content_control.route('/article/comments/<int:aid>')
 def get_comments(aid):
-    article = Article.query.join(Channel).filter(Article.aid == aid)\
-                           .filter(Channel.status.op('&')(4) == 0)\
-                           .filter(Article.article_status.op('&')(4) == 0)\
-                           .filter(Article.article_status.op('&')(8) == 0).first()
-
+    article = one_article_query(aid)
     if not article:
         return jsonify(msg='what article?'), 404
 
@@ -73,9 +80,7 @@ def post_comment(aid):
     if not user_obj:
         return jsonify(msg='who are you?'), 400
 
-    article_obj = Article.query.filter(Article.article_status.op('&')(4) == 0)\
-                               .filter(Article.article_status.op('&')(8) == 0)\
-                               .filter_by(aid=aid).first()
+    article_obj = one_article_query(aid)
     if not article_obj:
         return jsonify(msg='what article?'), 404
 
@@ -107,7 +112,6 @@ def get_channel(cid):
 
     articles = Article.query.join(Channel) \
                             .filter(Channel.cid == cid) \
-                            .filter(Channel.status.op('&')(4) == 0) \
                             .filter(Article.article_status.op('&')(4) == 0) \
                             .filter(Article.article_status.op('&')(8) == 0)
 

@@ -54,13 +54,3 @@ def logout():
     jti = get_raw_jwt()['jti']
     blacklist.add(jti)
     return jsonify({'message': 'logged out'}), 200
-
-
-@user_control.route('/admin-login')
-@fresh_jwt_required
-def adm_login():
-    user = User(username='admin')
-    user.role = UserRole.Admin
-    token = create_access_token(user.username)
-    return jsonify({'user': user.username, 'msg': 'Login successful', 'access-token': token}), 200
-
