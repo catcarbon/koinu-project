@@ -6,6 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from app.Models import User, Article, Channel
 from app.Models import favorite_table
+from app.routes.ContentControl import one_article_query
+from app.routes.Admin import one_channel_query
 
 content_display = Blueprint('content_display', __name__)
 channel_management = Blueprint('channel_management', __name__)
@@ -23,8 +25,7 @@ def subscribe_to(cid):
     if not user_obj:
         return jsonify({'msg': 'who are you?'}), 401
 
-    channel_obj = Channel.query.filter_by(cid=cid) \
-        .filter(Channel.status.op('&')(4) == 0).first()
+    channel_obj = one_channel_query(cid)
     if not channel_obj:
         return jsonify({'msg': 'what channel?'}), 404
 
@@ -38,7 +39,7 @@ def subscribe_to(cid):
 
 
 #
-# User can only like active articles (not disabled, not requested)
+# User can only like active articles (not disabled, not requested, not channel disabled)
 #
 @favorite_management.route('/like/<int:aid>')
 @jwt_required
@@ -48,9 +49,7 @@ def like(aid):
     if not user_obj:
         return jsonify({'msg': 'who are you?'}), 401
 
-    article_obj = Article.query.filter_by(aid=aid) \
-        .filter(Article.article_status.op('&')(4) == 0) \
-        .filter(Article.article_status.op('&')(8) == 0).first()
+    article_obj = one_article_query(aid)
     if not article_obj:
         return jsonify({'msg': 'what article?'}), 404
 
@@ -135,9 +134,11 @@ def get_newest_articles_from_subscribed_channel(limit=20):
 
     channel_list = list(map(lambda channel: channel.cid, user_obj.subscriptions))
 
-    it = Article.query.join(Channel) \
-        .filter(Channel.status.op('&')(4) == 0) \
+    it = Article.query.join(User, User.uid == Article.article_author_uid)\
+        .join(Channel, Channel.cid == Article.article_channel_cid) \
+        .filter(User.is_active) \
         .filter(Channel.cid.in_(channel_list)) \
+        .filter(Channel.status.op('&')(4) == 0) \
         .filter(Article.article_status.op('&')(4) == 0) \
         .filter(Article.article_status.op('&')(8) == 0) \
         .order_by(Article.article_created.desc()).limit(limit)
@@ -156,13 +157,16 @@ def get_favorites_list(limit=20, page_offset=0):
     username = get_jwt_identity()
     user_obj: User = User.query.filter_by(username=username).first()
 
-    it = Article.query.join(Channel).join(favorite_table) \
+    it = Article.query.join(favorite_table)\
+        .join(Channel, Channel.cid == Article.article_channel_cid)\
+        .join(User, User.uid == Article.article_author_uid)\
         .filter(favorite_table.c.fav_user_uid == user_obj.uid) \
         .filter(Channel.status.op('&')(4) == 0) \
+        .filter(User.is_active) \
         .filter(Article.article_status.op('&')(4) == 0) \
         .filter(Article.article_status.op('&')(8) == 0) \
         .order_by(Article.article_created.desc()).limit(limit)
 
-    article_list = helper_article_list(map(lambda x: x[-1], it))
+    article_list = helper_article_list(it)
 
     return jsonify(article_list), 200
