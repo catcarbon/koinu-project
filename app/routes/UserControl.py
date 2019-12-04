@@ -45,7 +45,8 @@ def login():
         return jsonify({'message': 'Bad credentials'}), 401
     else:
         token = create_access_token(user.username)
-        return jsonify({'username': user.username, 'msg': 'Login successful', 'access-token': token}), 200
+        return jsonify({'username': user.username, 'msg': 'Login successful',
+                        'access-token': token, 'is_admin': user.is_admin()}), 200
 
 
 @user_control.route('/logout')
