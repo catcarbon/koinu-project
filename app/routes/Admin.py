@@ -18,6 +18,7 @@ def check_admin(username):
 
 #
 # Return a single channel which isn't disabled.
+# Channel admin is not used so the query doesn't filter disabled admins.
 #
 def one_channel_query(cid):
     channel = Channel.query.filter(Channel.status.op('&')(4) == 0).filter_by(cid=cid).first()
@@ -46,8 +47,8 @@ def create_channel():
 
     ret_json, ret_code = {'msg': 'channel created'}, 201
     try:
-        ret_json['cid'] = channel_obj.cid
         db.session.commit()
+        ret_json['cid'] = channel_obj.cid
     except IntegrityError:
         ret_json['msg'], ret_code = 'channel name existed', 400
         db.session.rollback()
@@ -67,7 +68,7 @@ def delete_article(aid):
     if not check_admin(username):
         return jsonify(msg='unauthorized'), 401
 
-    article_obj = Article.query.get(aid=aid)
+    article_obj = Article.query.get(aid)
     if not article_obj:
         return jsonify(msg='what article?'), 404
 

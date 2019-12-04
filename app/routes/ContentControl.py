@@ -4,6 +4,7 @@ from sqlalchemy.exc import DataError
 
 from app import db, limit_payload_length
 from app.Models import User, Article, Channel, Comment
+from app.routes.Admin import one_channel_query
 
 content_control = Blueprint('content_control', __name__)
 
@@ -12,8 +13,10 @@ content_control = Blueprint('content_control', __name__)
 # Return a single article which isn't disabled or its channel disabled.
 #
 def one_article_query(aid):
-    article = Article.query.join(Channel).filter(Article.aid == aid) \
+    article = Article.query.join(Channel).join(User, User.uid == Article.article_author_uid)\
+                           .filter(Article.aid == aid) \
                            .filter(Channel.status.op('&')(4) == 0) \
+                           .filter(User.is_active) \
                            .filter(Article.article_status.op('&')(4) == 0) \
                            .filter(Article.article_status.op('&')(8) == 0).first()
 
@@ -97,8 +100,7 @@ def post_comment(aid):
 
 @content_control.route('/channel/<int:cid>')
 def get_channel(cid):
-    channel = Channel.query.filter_by(cid=cid).filter(Channel.status.op('&')(4) == 0).first()
-
+    channel = one_channel_query(cid)
     if not channel:
         return jsonify(msg='what channel?'), 404
 
@@ -110,8 +112,9 @@ def get_channel(cid):
         'articles': []
     }
 
-    articles = Article.query.join(Channel) \
+    articles = Article.query.join(Channel).join(User, User.uid == Article.article_author_uid) \
                             .filter(Channel.cid == cid) \
+                            .filter(User.is_active) \
                             .filter(Article.article_status.op('&')(4) == 0) \
                             .filter(Article.article_status.op('&')(8) == 0)
 

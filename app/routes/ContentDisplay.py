@@ -148,6 +148,7 @@ def get_newest_articles_from_subscribed_channel(limit=20):
     return jsonify(article_list), 200
 
 
+@content_display.route('/favorites')
 @content_display.route('/favorites/<int:limit>')
 @jwt_required
 def get_favorites_list(limit=20, page_offset=0):
