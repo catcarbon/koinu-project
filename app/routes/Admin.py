@@ -40,9 +40,8 @@ def create_channel():
         return jsonify(msg='unauthorized'), 401
 
     description = request.json.get('description')
-    is_public = request.json.get('is_public')
 
-    channel_obj = Channel(name=name, description=description, is_public=is_public)
+    channel_obj = Channel(name=name, description=description)
     db.session.add(channel_obj)
 
     ret_json, ret_code = {'msg': 'channel created'}, 201

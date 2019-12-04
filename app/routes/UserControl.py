@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, fresh_jwt_required, create_access_token, get_raw_jwt
+from flask_jwt_extended import jwt_required, create_access_token, get_raw_jwt
 
 from app import db, blacklist
 from app.Models import User
