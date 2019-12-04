@@ -1,8 +1,9 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
+from functools import wraps
 from importlib import import_module
 
 from argon2 import PasswordHasher
@@ -16,6 +17,23 @@ argon2 = PasswordHasher()
 blacklist = set()
 
 import_module('app.Models')
+
+
+#
+# 413 error decorator
+#
+def limit_payload_length(max_length):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            pld_length = request.content_length
+            if pld_length is not None and pld_length > max_length:
+                return jsonify(msg='payload too large', max=max_length), 413
+            return f(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def create_app():
@@ -53,6 +71,12 @@ def resource_not_found(e):
 @app_instance.errorhandler(405)
 def method_not_allowed(e):
     return jsonify({'msg': 'method not allowed'}), 405
+
+
+if not Config.DEBUG:
+    @app_instance.errorhandler(500)
+    def internal_error(e):
+        return jsonify(msg='an internal error has occurred'), 500
 
 
 @app_instance.route('/api')

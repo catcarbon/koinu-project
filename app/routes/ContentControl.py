@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from sqlalchemy.exc import DataError
 
-from app import db
+from app import db, limit_payload_length
 from app.Models import User, Article, Channel, Comment
 
 content_control = Blueprint('content_control', __name__)
@@ -11,7 +12,7 @@ content_control = Blueprint('content_control', __name__)
 def get_article(aid):
     article = Article.query.join(Channel)\
                            .filter(Article.aid == aid)\
-                           .filter(Channel.status != 4).first()
+                           .filter(Channel.status.op('&')(4) == 0).first()
 
     if not article:
         return jsonify(msg='what article?'), 404
@@ -26,19 +27,24 @@ def get_article(aid):
 
     return jsonify(article_dict), 200
 
-
 #
-# TODO: filter out comments by disabled users
+# Removed comments are being deleted from the database in current implementation.
 #
 @content_control.route('/article/comments/<int:aid>')
 def get_comments(aid):
-    article = Article.query.filter(Article.article_status < 3).filter_by(aid=aid).first()
+    article = Article.query.join(Channel).filter(Article.aid == aid)\
+                           .filter(Channel.status.op('&')(4) == 0)\
+                           .filter(Article.article_status.op('&')(4) == 0)\
+                           .filter(Article.article_status.op('&')(8) == 0).first()
 
     if not article:
         return jsonify(msg='what article?'), 404
 
+    comments = Comment.query.join(User).filter(Comment.comment_article_aid == aid)\
+                                       .filter(User.is_active)
+
     comment_list = []
-    for comment in article.received_comments:
+    for comment in comments:
         comment_dict = {
             'coid': comment.coid,
             'author': comment.sent_by.username,
@@ -53,6 +59,7 @@ def get_comments(aid):
 
 @content_control.route('/article/comment/<int:aid>', methods=['POST'])
 @jwt_required
+@limit_payload_length(Comment.BODY_MAX_LENGTH + 100)
 def post_comment(aid):
     if not request.is_json:
         return jsonify({'msg': 'Not json'}), 400
@@ -66,23 +73,26 @@ def post_comment(aid):
     if not user_obj:
         return jsonify(msg='who are you?'), 400
 
-    article_obj = Article.query.filter(Article.article_status < 3).filter_by(aid=aid).first()
+    article_obj = Article.query.filter(Article.article_status.op('&')(4) == 0)\
+                               .filter(Article.article_status.op('&')(8) == 0)\
+                               .filter_by(aid=aid).first()
     if not article_obj:
         return jsonify(msg='what article?'), 404
 
     comment_obj = Comment(body=comment, comment_article_aid=article_obj.aid)
     user_obj.sent_comments.append(comment_obj)
 
-    db.session.commit()  # error not expected
-    return jsonify(msg='comment posted'), 201
+    try:
+        db.session.commit()
+        return jsonify(msg='comment posted'), 201
+    except DataError:
+        db.session.rollback()
+        return jsonify(msg='comment too long', max=Comment.BODY_MAX_LENGTH), 413
 
 
-#
-# TODO: filter out disabled articles
-#
 @content_control.route('/channel/<int:cid>')
 def get_channel(cid):
-    channel = Channel.query.filter(Channel.status != 4).filter_by(cid=cid).first()
+    channel = Channel.query.filter_by(cid=cid).filter(Channel.status.op('&')(4) == 0).first()
 
     if not channel:
         return jsonify(msg='what channel?'), 404
@@ -95,7 +105,13 @@ def get_channel(cid):
         'articles': []
     }
 
-    for article in channel.articles:
+    articles = Article.query.join(Channel) \
+                            .filter(Channel.cid == cid) \
+                            .filter(Channel.status.op('&')(4) == 0) \
+                            .filter(Article.article_status.op('&')(4) == 0) \
+                            .filter(Article.article_status.op('&')(8) == 0)
+
+    for article in articles:
         article_dict = {
             'aid': article.aid,
             'title': article.title,
@@ -112,7 +128,7 @@ def get_channel(cid):
 @content_control.route('/channels')
 def get_channels():
     channel_list = []
-    for channel in Channel.query.filter(Channel.status != 4):
+    for channel in Channel.query.filter(Channel.status.op('&')(4) == 0):
         channel_dict = {
             'cid': channel.cid,
             'name': channel.name,
