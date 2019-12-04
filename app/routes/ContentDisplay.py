@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from app.Models import User, Article, Channel
 from app.Models import favorite_table
-from app.routes.ContentControl import one_article_query
+from app.routes.ContentControl import helper_article_list, one_article_query
 from app.routes.Admin import one_channel_query
 
 content_display = Blueprint('content_display', __name__)
@@ -106,21 +106,6 @@ def unlike(aid):
         return jsonify({'msg': 'removed like from article'}), 201
     except ValueError:
         return jsonify({'msg': 'article is not liked by user'}), 200
-
-
-def helper_article_list(iterator):
-    article_list = []
-    for article in iterator:
-        article_dict = {
-            'aid': article.aid,
-            'title': article.title,
-            'author': article.author.username,
-            'publish_time': article.article_created,
-            'content': article.content
-        }
-        article_list.append(article_dict)
-
-    return article_list
 
 
 @content_display.route('/subscriptions')

@@ -9,6 +9,22 @@ from app.routes.Admin import one_channel_query
 content_control = Blueprint('content_control', __name__)
 
 
+def helper_article_list(iterator):
+    article_list = []
+    for article in iterator:
+        article_dict = {
+            'aid': article.aid,
+            'title': article.title,
+            'author': article.author.username,
+            'publish_time': article.article_created,
+            'content': article.content,
+            'likes': len(article.liked_by)
+        }
+        article_list.append(article_dict)
+
+    return article_list
+
+
 #
 # Return a single article which isn't disabled or its channel disabled.
 #
@@ -34,7 +50,8 @@ def get_article(aid):
         'title': article.title,
         'author': article.author.username,
         'publish_time': article.article_created,
-        'content': article.content
+        'content': article.content,
+        'likes': len(article.liked_by)
     }
 
     return jsonify(article_dict), 200
@@ -116,18 +133,11 @@ def get_channel(cid):
                             .filter(Channel.cid == cid) \
                             .filter(User.is_active) \
                             .filter(Article.article_status.op('&')(4) == 0) \
-                            .filter(Article.article_status.op('&')(8) == 0)
+                            .filter(Article.article_status.op('&')(8) == 0).order_by(Article.article_created.desc())
 
-    for article in articles:
-        article_dict = {
-            'aid': article.aid,
-            'title': article.title,
-            'author': article.author.username,
-            'publish_time': article.article_created,
-            'content': article.content
-        }
+    articles_list = helper_article_list(articles)
 
-        channel_dict['articles'].append(article_dict)
+    channel_dict['articles'] = articles_list
 
     return jsonify(channel_dict), 200
 
